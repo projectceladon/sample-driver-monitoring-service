@@ -23,7 +23,8 @@ echo ${path_to_open_model_zoo}
 echo ${path_to_downloader}
 
 mkdir -p ${models_path}/intel
-python3 ${path_to_downloader} --list ${parent_path}/list.lst -o ${models_path}/intel
+#python3 ${path_to_downloader} --list ${parent_path}/list.lst -o ${models_path}/intel
+omz_downloader --list ${parent_path}/list.lst -o ${models_path}/intel
 
 for FP in $PRECISION
 do 

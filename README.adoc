@@ -136,7 +136,7 @@ apt-get install libboost-dev
 
 [source,bash]
 ----
-apt-get install libao-dev libsndfile1-dev
+apt-get install libao-dev libsndfile1-dev libx11-dev libopenblas-dev liblapack-dev libgflags-dev
 ----
 
 * [Optional] ETS or ATS simulator. Install it through Steam on Ubuntu.
