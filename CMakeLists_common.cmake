@@ -118,7 +118,7 @@ else()
     if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-command-line-argument")
     elseif(UNIX)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wuninitialized -Winit-self -Wmaybe-uninitialized")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Winit-self -Wmaybe-uninitialized")
     endif()
 endif()
 
@@ -145,6 +145,7 @@ set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
 # Make sure dependencies are present
 set(IE_SAMPLES_GFLAGS_DIR "${InferenceEngine_Samples_DIR}/thirdparty/gflags")
 set(IE_SAMPLES_FORMAT_READER_DIR "${InferenceEngine_Samples_DIR}/common/format_reader")
+set(IE_SAMPLES_UTILS_DIR "${InferenceEngine_Samples_DIR}/common/utils")
 
 if(NOT EXISTS "${IE_SAMPLES_GFLAGS_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "The required 'gflags' library was not found in the Inference Engine's samples at: ${IE_SAMPLES_GFLAGS_DIR}")
@@ -152,19 +153,29 @@ endif()
 if(NOT EXISTS "${IE_SAMPLES_FORMAT_READER_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "The required 'format_reader' library was not found in the Inference Engine's samples at: ${IE_SAMPLES_GFLAGS_DIR}")
 endif()
+if(NOT EXISTS "${IE_SAMPLES_UTILS_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "The required 'ie_samples_utils' library was not found in the Inference Engine's samples at: ${IE_SAMPLES_GFLAGS_DIR}")
+endif()
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (
-    ${InferenceEngine_Samples_DIR}/common/format_reader
-    ${InferenceEngine_Samples_DIR}
-    ${InferenceEngine_Samples_DIR}/../include
-    ${InferenceEngine_Samples_DIR}/thirdparty/gflags/include
-    ${InferenceEngine_Samples_DIR}/common
+    "/opt/intel/openvino_2022/samples/cpp",
+    "/opt/intel/openvino_2022/runtime/include",
+    "/opt/intel/openvino_2022/samples/cpp/common",
+    # "/opt/intel/openvino_2022/samples/cpp/common/format_reader",
+    "/opt/intel/openvino_2022/samples/cpp/common/utils/include",
+    "/opt/intel/openvino_2022/runtime/include/ie"
+    # ${InferenceEngine_Samples_DIR}../../runtime/include,
+    # ${InferenceEngine_Samples_DIR}/common/format_reader,
+    # ${InferenceEngine_Samples_DIR}/common/utils/include,
+    # ${InferenceEngine_Samples_DIR}../../runtime/include/ie,
+    # ${InferenceEngine_Samples_DIR}/common/format_reader
 )
 
 set(GFLAGS_IS_SUBPROJECT TRUE)
+add_subdirectory(${IE_SAMPLES_UTILS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ie_samples_utils)
 add_subdirectory(${IE_SAMPLES_GFLAGS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gflags)
-add_subdirectory(${IE_SAMPLES_FORMAT_READER_DIR} ${CMAKE_CURRENT_BINARY_DIR}/format_reader)
+# add_subdirectory(${IE_SAMPLES_FORMAT_READER_DIR} ${CMAKE_CURRENT_BINARY_DIR}/format_reader)
 
 if (UNIX)
     SET(LIB_DL dl)

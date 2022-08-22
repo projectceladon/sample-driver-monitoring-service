@@ -76,6 +76,8 @@ include_directories (${Boost_INCLUDE_DIRS})
 add_executable(${TARGET_NAME} ${MAIN_SRC} ${MAIN_HEADERS})
 
 add_dependencies(${TARGET_NAME} gflags)
+add_dependencies(${TARGET_NAME} ie_samples_utils)
+
 add_definitions(-DBOOST_LOG_DYN_LINK)
 if( SIMULATOR )
   add_definitions(-DSIMULATOR)
@@ -84,9 +86,10 @@ endif()
 set_target_properties(${TARGET_NAME} PROPERTIES "CMAKE_CXX_FLAGS" "${CMAKE_CXX_FLAGS} -fPIE" COMPILE_PDB_NAME ${TARGET_NAME})
 
 if ("$ENV{OPENVINO_VER}" STREQUAL "2019")
-    target_link_libraries(${TARGET_NAME} format_reader IE::ie_cpu_extension ${IE_LIBRARIES} ${InferenceEngine_LIBRARIES} gflags)
+    target_link_libraries(${TARGET_NAME} ie_samples_utils IE::ie_cpu_extension ${IE_LIBRARIES} ${InferenceEngine_LIBRARIES} gflags)
 else ()
-    target_link_libraries(${TARGET_NAME} format_reader ${IE_LIBRARIES} ${InferenceEngine_LIBRARIES} gflags)
+    find_package(OpenVINO REQUIRED COMPONENTS Runtime)
+    target_link_libraries(${TARGET_NAME} openvino::runtime IE::inference_engine gflags ie_samples_utils)
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC

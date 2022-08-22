@@ -11,7 +11,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <inference_engine.hpp>
+#include <ie_input_info.hpp>
+#include <ie_core.hpp>
+#include <ie_blob.h>
+#include <openvino/openvino.hpp>
 
 using namespace InferenceEngine;
 
@@ -22,19 +25,12 @@ bool CnnDLSDKBase::Enabled() const {
 }
 
 void CnnDLSDKBase::Load() {
-    CNNNetReader net_reader;
-    net_reader.ReadNetwork(config_.path_to_model);
-    net_reader.ReadWeights(config_.path_to_weights);
-
-    if (!net_reader.isParseSuccess()) {
-        THROW_IE_EXCEPTION << "Cannot load model";
-    }
-
-    const int currentBatchSize = net_reader.getNetwork().getBatchSize();
+    InferenceEngine::CNNNetwork net_reader = config_.plugin.ReadNetwork(config_.path_to_model);
+    const int currentBatchSize = net_reader.getBatchSize();
     if (currentBatchSize != config_.max_batch_size)
-        net_reader.getNetwork().setBatchSize(config_.max_batch_size);
+        net_reader.setBatchSize(config_.max_batch_size);
 
-    InferenceEngine::InputsDataMap in = net_reader.getNetwork().getInputsInfo();
+    InferenceEngine::InputsDataMap in = net_reader.getInputsInfo();
     if (in.size() != 1) {
         THROW_IE_EXCEPTION << "Network should have only one input";
     }
@@ -42,13 +38,13 @@ void CnnDLSDKBase::Load() {
     in.begin()->second->setLayout(Layout::NCHW);
     input_blob_name_ = in.begin()->first;
 
-    OutputsDataMap out = net_reader.getNetwork().getOutputsInfo();
+    OutputsDataMap out = net_reader.getOutputsInfo();
     for (auto&& item : out) {
         item.second->setPrecision(Precision::FP32);
         output_blobs_names_.push_back(item.first);
     }
 
-    executable_network_ = config_.plugin.LoadNetwork(net_reader.getNetwork(), config_.deviceName, {});
+    executable_network_ = config_.plugin.LoadNetwork(net_reader, config_.deviceName, {});
     infer_request_ = executable_network_.CreateInferRequest();
 }
 

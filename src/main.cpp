@@ -15,7 +15,7 @@
 #include <mutex>
 #include <math.h>
 
-#include <inference_engine.hpp>
+// #include <inference_engine.hpp>
 
 #include <samples/slog.hpp>
 
@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
                     slog::info << "CPU Extension loaded: " << FLAGS_l << slog::endl;
                 }
                 #if (OPENVINO_VER==2019)
-                core.AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>(), deviceName);
+                core.add_extension(std::make_shared<Extensions::Cpu::CpuExtensions>(), deviceName);
                 #endif
             }
             else if (!FLAGS_c.empty())

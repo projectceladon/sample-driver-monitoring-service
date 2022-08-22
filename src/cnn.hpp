@@ -10,9 +10,14 @@
 #include <vector>
 #include <functional>
 
-#include <samples/ocv_common.hpp>
+#include "ocv_common.hpp"
+
 #include <samples/common.hpp>
-#include <inference_engine.hpp>
+#include <ie_core.hpp>
+#include <cpp/ie_infer_request.hpp>
+#include <cpp/ie_executable_network.hpp>
+#include <ie/inference_engine.hpp>
+#include <openvino/openvino.hpp>
 
 /**
 * @brief Base class of config for network
