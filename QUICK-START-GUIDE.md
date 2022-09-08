@@ -2,8 +2,17 @@
 
 ## Pre-requite
 
+* You should install OpenVINO 2022.1 by APT.
+* In order to convert model, you should install openvino-dev by PIP.
+
 ```shell
-sudo apt-get install libboost-dev libboost-log-dev libao-dev libsndfile1-dev libx11-dev libopenblas-dev liblapack-dev libgflags-dev libjpeg8-dev libjpeg9-dev libopenblas-dev libblas-dev
+pip3 install openvino-dev
+```
+
+* Necessary packages to build
+
+```shell
+sudo apt-get install libboost-dev libboost-log-dev libao-dev libsndfile1-dev libx11-dev libopenblas-dev liblapack-dev libgflags-dev libjpeg9-dev libopenblas-dev libblas-dev
 ```
 
 ## Download models
