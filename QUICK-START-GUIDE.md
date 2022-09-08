@@ -6,7 +6,11 @@
 * In order to convert model, you should install openvino-dev by PIP.
 
 ```shell
-pip3 install openvino-dev
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install wheel
+python -m pip install openvino-dev
 ```
 
 * Necessary packages to build
@@ -19,6 +23,7 @@ sudo apt-get install libboost-dev libboost-log-dev libao-dev libsndfile1-dev lib
 
 ```shell
 source /opt/intel/openvino_2022/setupvars.sh
+source .venv/bin/activate
 bash scripts/download_models.sh
 ```
 

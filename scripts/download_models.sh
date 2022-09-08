@@ -6,7 +6,7 @@
 
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
-PRECISION="FP32 FP16 INT8 INT1"
+PRECISION="FP32 FP16 INT8 INT1 FP16-INT8"
 models_path=$parent_path/../models/
 for prec in $PRECISION
 do
