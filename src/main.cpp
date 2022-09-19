@@ -1021,6 +1021,7 @@ int main(int argc, char *argv[])
                         ii++;
                     }
 
+#ifdef SIMULATOR
                     // Truck Label
                     cv::rectangle(prev_frame, cv::Rect(width - (x + 20), 20, x, y), cv::Scalar(0, 0, 0), -1);
                     cv::rectangle(prev_frame, cv::Rect(width - (x + 20), 20, x, y), cv::Scalar(255, 255, 255), 2);
@@ -1046,6 +1047,7 @@ int main(int argc, char *argv[])
                         cv::putText(prev_frame, "GearStatus: Driving", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
                     else
                         cv::putText(prev_frame, "GearStatus: Stopped", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
+#endif
                     
                     // End Thread 1: Driver Recognition
                     thread_recognition.join();

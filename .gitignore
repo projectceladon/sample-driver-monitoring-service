@@ -3,3 +3,5 @@ build/
 *.vscode/
 models/
 .idea
+.venv/
+.data

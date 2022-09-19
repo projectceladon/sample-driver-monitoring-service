@@ -64,7 +64,19 @@ python3 create_list.py ../drivers/
 
 ### Run Program
 
+#### Camera Input
+
 ```shell
 cd ../build/intel64/Release
 ./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json
+```
+
+#### Recorded Video Input
+
+```shell
+cd ../build/intel64/Release
+./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json -i <path/video/input>
+
+# Example)
+./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json -i ../../../.data/demo03-resized.webm
 ```
