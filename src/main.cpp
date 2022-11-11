@@ -58,6 +58,8 @@ void ros_client(Truck *truck)
 }
 #endif
 
+#include "RemoteClient.hpp"
+
 using namespace InferenceEngine;
 
 static dlib::rectangle openCVRectToDlib(cv::Rect r)
@@ -545,6 +547,8 @@ int main(int argc, char *argv[])
 		FLAGS_d_reid = FLAGS_d_all;
 	}
 
+        DMS::RemoteClient mRemoteClient;
+        mRemoteClient.RunServer();
         slog::info << "Reading input" << slog::endl;
         cv::VideoCapture cap;
         const bool isCamera = FLAGS_i == "cam";
@@ -791,6 +795,13 @@ int main(int argc, char *argv[])
                 timer.start("video frame decoding");
                 frameReadStatus = cap.read(next_frame);
                 timer.finish("video frame decoding");
+            }
+            if (!frameReadStatus && (FLAGS_i != "cam") && (FLAGS_i != "cam1")) {
+                cap.open(FLAGS_i);
+                cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+                cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+                frameReadStatus = cap.read(next_frame);
+                slog::info << "Restarting reading input" << slog::endl;
             }
             if (!frameReadStatus) {
                 timer.finish("total");
@@ -1091,6 +1102,9 @@ int main(int argc, char *argv[])
 #endif
         slog::info << "Number of processed frames: " << framesCounter << slog::endl;
         slog::info << "Total image throughput: " << framesCounter * (1000.F / timer["total"].getTotalDuration()) << " fps" << slog::endl;
+        slog::info << "Forcing DMS Server Stop" << slog::endl;
+        mRemoteClient.Shutdown();
+        slog::info << "DMS Server Stopped" << slog::endl;
 
         // -----------------------------------------------------------------------------------------------------
     }

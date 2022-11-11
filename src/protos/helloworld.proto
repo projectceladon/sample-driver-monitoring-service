@@ -1,0 +1,32 @@
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "com.intel.examples.objectDetection";
+option java_outer_classname = "objectDetectionProto";
+option objc_class_prefix = "HLW";
+package objectDetection;
+// The Detection service definition.
+service Detection {
+  // 
+  rpc getPredictions (RequestBytes) returns (PredictionsList) {}
+}
+message RequestBytes {
+  bytes data = 1;
+  int32 length = 2;
+}
+// The response message with list of Predictions.
+message PredictionsList {
+  repeated Prediction predictions = 1;
+}
+//Each Prediction will have :
+//4 float coordinate values
+//1 value each for confidence, classIndex(class predicted) and predictIndex(index of the predictions 0-1916)
+message Prediction {
+    float index0 = 1;
+    float index1 = 2;
+    float index2 = 3;
+    float index3 = 4;
+    float confidence = 5;
+    int32 classIndex = 6;
+    int32 predictIndex = 7;
+}
