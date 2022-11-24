@@ -96,7 +96,7 @@ else ()
     set (LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_DIRECTORY}/lib)
 endif()
 
-set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++14 -Wno-stringop-overflow ${CMAKE_CXX_FLAGS}")
 if (WIN32)
     if(NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
         message(FATAL_ERROR "Only 64-bit supported on Windows")

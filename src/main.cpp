@@ -218,7 +218,7 @@ std::string labelAlarm = "";
 cv::Mat face_save;
 bool firstPhoto = true;
 
-void alarmDrowsiness(cv::Mat prev_frame, int yawn_total, int blinl_total, int width, int height, int x_alarm, int y_alarm, int x_truck_i, bool headbutt)
+void alarmDrowsiness(cv::Mat prev_frame, int yawn_total, int blinl_total, int width, int height, int x_alarm, int y_alarm, int x_truck_i, bool headbutt, double& mDrowsiness)
 {
     // Headbutt Logic
     if (headbutt && startHeadbutt)
@@ -306,11 +306,14 @@ void alarmDrowsiness(cv::Mat prev_frame, int yawn_total, int blinl_total, int wi
         cv::putText(prev_frame, cv::format("%3.0f", tDrowsiness), cv::Point2f(x_vum_drow + 30, y_vum_drow + y_vum - (y_vum_unit * maxCritical) + 5), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1);
     }
 
+    slog::info <<"tDrowsiness:" << tDrowsiness<< slog::endl;
+    mDrowsiness = tDrowsiness;
+
     // VUmeter Drowsiness: Rectangle
     cv::rectangle(prev_frame, cv::Rect(x_vum_drow, y_vum_drow, x_vum, y_vum), cv::Scalar(255, 255, 255), 1);
 }
 
-void alarmDistraction(cv::Mat prev_frame, int is_dist, int y_alarm, int x_truck_i)
+void alarmDistraction(cv::Mat prev_frame, int is_dist, int y_alarm, int x_truck_i, double& mDistraction)
 {
     // Alarm Logic Function
     if (is_dist)
@@ -424,6 +427,8 @@ void alarmDistraction(cv::Mat prev_frame, int is_dist, int y_alarm, int x_truck_
     }
 
     // VUmeter Drowsiness: Rectangle
+    slog::info << "tDistraction: " << tDistraction << slog::endl;
+    mDistraction = tDistraction;
     cv::rectangle(prev_frame, cv::Rect(x_vum_dist, y_vum_dist, x_vum, y_vum), cv::Scalar(255, 255, 255), 1);
 }
 
@@ -529,6 +534,7 @@ int main(int argc, char *argv[])
         int yawn_total = 0;
         boost::circular_buffer<float> ear_5(5);
         boost::circular_buffer<float> ear_5_mouth(5);
+        bool startRemote = false;
 
         std::cout << "InferenceEngine: " << GetInferenceEngineVersion() << std::endl;
 
@@ -548,7 +554,7 @@ int main(int argc, char *argv[])
 	}
 
         DMS::RemoteClient mRemoteClient;
-        mRemoteClient.RunServer();
+        std::shared_ptr<DMS::Prediction> mResult = std::make_shared<DMS::Prediction>();
         slog::info << "Reading input" << slog::endl;
         cv::VideoCapture cap;
         const bool isCamera = FLAGS_i == "cam";
@@ -566,6 +572,12 @@ int main(int argc, char *argv[])
             //cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
             //cap.set(cv::CAP_PROP_FPS, 30);
         }
+        else if (FLAGS_i == "remote")
+        {
+            mRemoteClient.RunServer();
+            startRemote = true;
+            slog::info << "Starting server to listen" << slog::endl;
+        }
         else if (!cap.open(FLAGS_i))
         {
             throw std::logic_error("Cannot open input file or camera: " + FLAGS_i);
@@ -575,11 +587,14 @@ int main(int argc, char *argv[])
         cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
         cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
         // cap.set(cv::CAP_PROP_FPS, 30);
-        
-        const size_t width = (size_t)cap.get(cv::CAP_PROP_FRAME_WIDTH);
-        const size_t height = (size_t)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-        
-        // Save the ouput
+        size_t width = 1280;
+        size_t height = 720;
+
+        if(!startRemote) {
+            width = (size_t)cap.get(cv::CAP_PROP_FRAME_WIDTH);
+            height= (size_t)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+        }
+        // Save the output
         cv::VideoWriter video_output;
         if (FLAGS_o) {
             video_output = cv::VideoWriter("video_output.avi",cv::VideoWriter::fourcc('M','J','P','G'),cap.get(cv::CAP_PROP_FPS), cv::Size(width,height),true);
@@ -593,7 +608,19 @@ int main(int argc, char *argv[])
 
         // read input (video) frame
         cv::Mat frame;
-        if (!cap.read(frame))
+        if(startRemote) {
+            //wait until we get first frame from remote
+            while(mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "waiting for first frame" << slog::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+            if(!mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "reading first frame" << slog::endl;
+	            frame = mRemoteClient.getFrameQueue().front();
+                mRemoteClient.getFrameQueue().pop();
+            }
+        }
+        else if (!cap.read(frame))
         {
             throw std::logic_error("Failed to get frame from cv::VideoCapture");
         }
@@ -712,7 +739,22 @@ int main(int argc, char *argv[])
 
         // Read next frame.
         timer.start("video frame decoding");
-        frameReadStatus = cap.read(frame);
+        if(startRemote) {
+            //wait until we get first frame from remote
+            while(mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "waiting for nextframe" << slog::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if(!mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "reading nextframe" << slog::endl;
+		        frame = mRemoteClient.getFrameQueue().front();
+                mRemoteClient.getFrameQueue().pop();
+                frameReadStatus = true;
+            }
+        } else {
+            frameReadStatus = cap.read(frame);
+        }
+
         timer.finish("video frame decoding");
 
         //dlib
@@ -755,6 +797,13 @@ int main(int argc, char *argv[])
                 }
                 prev_detection_results.clear();
                 prev_detection_results.push_back(big_head);
+                //copy detected face location to results
+                if(startRemote) {
+                    mResult->x = big_head.location.x;
+                    mResult->y = big_head.location.y;
+                    mResult->height = big_head.location.height;
+                    mResult->width = big_head.location.width;
+                }
                 big_head.label = 0;
                 big_head.confidence = 0;
                 big_head.location = cv::Rect(0, 0, 0, 0);
@@ -769,14 +818,14 @@ int main(int argc, char *argv[])
 
             timer.start("data preprocessing");
             // Fill inputs of face analytics networks.
-            for (auto &&face : prev_detection_results)
+            if (isFaceAnalyticsEnabled)
             {
-                if (isFaceAnalyticsEnabled)
+                for (auto &&face : prev_detection_results)
                 {
                     auto clippedRect = face.location & cv::Rect(0, 0, width, height);
-                    cv::Mat face = prev_frame(clippedRect);
+                    cv::Mat faces = prev_frame(clippedRect);
                     face_save = frame(clippedRect);
-                    headPoseDetector.enqueue(face);
+                    headPoseDetector.enqueue(faces);
                 }
             }
             timer.finish("data preprocessing");
@@ -788,20 +837,25 @@ int main(int argc, char *argv[])
                 headPoseDetector.submitRequest();
             }
             timer.finish("face analytics call");
+            slog::info << "face Analutics calles" << slog::endl;
 
             // Read next frame if current one is not last.
-            if (!isLastFrame)
-            {
+            if(startRemote) {
+            //wait until we get first frame from remote
+                while(mRemoteClient.getFrameQueue().empty()) {
+                    slog::info << "waiting for nextframe" << slog::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+                if(!mRemoteClient.getFrameQueue().empty()) {
+                    slog::info << "reading next nextframe2" << slog::endl;
+		            next_frame = mRemoteClient.getFrameQueue().front();
+                    mRemoteClient.getFrameQueue().pop();
+                    frameReadStatus = true;
+                }
+            } else if (!isLastFrame) {
                 timer.start("video frame decoding");
                 frameReadStatus = cap.read(next_frame);
                 timer.finish("video frame decoding");
-            }
-            if (!frameReadStatus && (FLAGS_i != "cam") && (FLAGS_i != "cam1")) {
-                cap.open(FLAGS_i);
-                cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-                cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-                frameReadStatus = cap.read(next_frame);
-                slog::info << "Restarting reading input" << slog::endl;
             }
             if (!frameReadStatus) {
                 timer.finish("total");
@@ -866,8 +920,9 @@ int main(int argc, char *argv[])
                 if ((truck.getEngine() && fSim) || !fSim) // Detect if Engine = ON and Simulator Flag
                 { 
                     // Thread 1: Driver Recognition
-                    std::thread thread_recognition(driver_recognition, prev_frame, prev_detection_results, landmarks_detector, face_reid, face_gallery, &driver_name, x_truck_i, y_driver_i);
-
+                    slog::info << "running driver recognition" << slog::endl;
+		            std::thread thread_recognition(driver_recognition, prev_frame, prev_detection_results, landmarks_detector, face_reid, face_gallery, &driver_name, x_truck_i, y_driver_i);
+                    
                     // Driver Label (CHECK! -> Not here)
                     cv::rectangle(prev_frame, cv::Rect(width - (x + 20), y_driver_i, x, y_driver), cv::Scalar(0, 0, 0), -1);
                     cv::rectangle(prev_frame, cv::Rect(width - (x + 20), y_driver_i, x, y_driver), cv::Scalar(255, 255, 255), 2);
@@ -963,7 +1018,10 @@ int main(int argc, char *argv[])
                             }
 
                             cv::putText(prev_frame, "Blinks: " + std::to_string(blinl_total), cv::Point2f(x_truck_i, y_driver_i + 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
-
+                            slog::info << "Blinks total: " << blinl_total << slog::endl;
+                                                        if(startRemote) {
+                                mResult->blinkTotal = blinl_total;
+                            }
                             //Yawn detection
                             float ear_mouth = (distanceAtoB(mouth[1], mouth[5]) + distanceAtoB(mouth[2], mouth[4])) / (2 * distanceAtoB(mouth[0], mouth[3]));
                             ear_5_mouth.push_front(ear_mouth);
@@ -987,7 +1045,11 @@ int main(int argc, char *argv[])
                                 yawn_counter = 0;
                             }
                             cv::putText(prev_frame, "Yawns: " + std::to_string(yawn_total), cv::Point2f(x_truck_i, y_driver_i + 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
+                            slog::info << "yawn_total: " << yawn_total << slog::endl;
+                            if(startRemote) {
+                                mResult->yawnTotal = yawn_total;
                             }
+                        }
 
                         cv::putText(prev_frame,
                                     out.str(),
@@ -1011,7 +1073,11 @@ int main(int argc, char *argv[])
                             headbutt = headbuttDetection(&pitch);
 
                             int is_dist = isDistracted(headPoseDetector[ii].angle_y, headPoseDetector[ii].angle_p, headPoseDetector[ii].angle_r);
-
+                            slog::info <<"is distracted: " << is_dist <<slog::endl;
+                            if(startRemote) {
+                                mResult->distLevel = is_dist;
+                            }
+                            
                             // Alarm Label
                             int x_alarm = width - (x + 20) - 20;
                             int y_alarm = y_driver_i + y_driver + 10;
@@ -1023,11 +1089,20 @@ int main(int argc, char *argv[])
                             cv::putText(prev_frame, "Description", cv::Point2f(x_truck_i - 20, y_alarm + y_vum + 75), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
 
                             // Thread: Drowsiness Alarm
-                            std::thread thread_drowsiness(alarmDrowsiness, prev_frame, yawn_total, blinl_total, width, height, x_alarm, y_alarm, x_truck_i, headbutt);
-                            std::thread thread_distraction(alarmDistraction, prev_frame, is_dist, y_alarm, x_truck_i);
+                            double mDistraction = 0;
+                            double mDrowsiness = 0;
+                            std::thread thread_drowsiness(alarmDrowsiness, prev_frame, yawn_total, blinl_total, width, height, x_alarm, y_alarm, x_truck_i, headbutt, std::ref(mDrowsiness));
+                            std::thread thread_distraction(alarmDistraction, prev_frame, is_dist, y_alarm, x_truck_i, std::ref(mDistraction));
                             // Thread: Drowsiness Alarm
                             thread_drowsiness.join();
                             thread_distraction.join();
+                            slog::info <<"mDro " << mDrowsiness << "---mDist" << mDistraction <<slog::endl;
+                            if(startRemote) {
+                                mResult->tDrowsiness = mDrowsiness;
+                                mResult->tDistraction = mDistraction;
+                            }
+                            slog::info <<"frame processed" <<slog::endl;
+
                         }
                         ii++;
                     }
@@ -1059,14 +1134,22 @@ int main(int argc, char *argv[])
                     else
                         cv::putText(prev_frame, "GearStatus: Stopped", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
 #endif
-                    
+
                     // End Thread 1: Driver Recognition
-                    thread_recognition.join();
+		            thread_recognition.join();
 
                 }
 
                 // Sample of Results
-                cv::imshow("Detection results", prev_frame);
+                
+                if(startRemote) {
+                    mRemoteClient.getLock();
+                    mRemoteClient.addResult(*mResult.get());
+                    mRemoteClient.doUnlock();
+                } else {
+                    cv::imshow("Detection results", prev_frame);
+                }
+               
                 // Save the ouput
                 if (FLAGS_o) {
                     video_output.write(prev_frame);
@@ -1102,9 +1185,11 @@ int main(int argc, char *argv[])
 #endif
         slog::info << "Number of processed frames: " << framesCounter << slog::endl;
         slog::info << "Total image throughput: " << framesCounter * (1000.F / timer["total"].getTotalDuration()) << " fps" << slog::endl;
-        slog::info << "Forcing DMS Server Stop" << slog::endl;
-        mRemoteClient.Shutdown();
-        slog::info << "DMS Server Stopped" << slog::endl;
+        if(startRemote){
+            slog::info << "Forcing DMS Server Stop" << slog::endl;
+            mRemoteClient.Shutdown();
+            slog::info << "DMS Server Stopped" << slog::endl;
+        }
 
         // -----------------------------------------------------------------------------------------------------
     }

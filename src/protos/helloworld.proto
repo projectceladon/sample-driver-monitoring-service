@@ -6,27 +6,37 @@ option java_outer_classname = "objectDetectionProto";
 option objc_class_prefix = "HLW";
 package objectDetection;
 // The Detection service definition.
+// send input frame and get prediction list
 service Detection {
-  // 
-  rpc getPredictions (RequestBytes) returns (PredictionsList) {}
+  rpc getPredictions (RequestString) returns (Prediction) {}
+  rpc sendFrame (RequestBytes) returns (ReplyStatus) {}
 }
 message RequestBytes {
   bytes data = 1;
   int32 length = 2;
 }
-// The response message with list of Predictions.
-message PredictionsList {
-  repeated Prediction predictions = 1;
+
+message RequestString {
+  string value = 1;
 }
+
+message ReplyStatus {
+  bool status = 1;
+}
+
 //Each Prediction will have :
 //4 float coordinate values
-//1 value each for confidence, classIndex(class predicted) and predictIndex(index of the predictions 0-1916)
+//1 Drowsiness and 1 Distraction value
+//1 blinkTotal
+//1 yawnTotal
 message Prediction {
-    float index0 = 1;
-    float index1 = 2;
-    float index2 = 3;
-    float index3 = 4;
-    float confidence = 5;
-    int32 classIndex = 6;
-    int32 predictIndex = 7;
+    double tDrowsiness = 1;
+    double tDistraction = 2;
+    int32 blinkTotal = 3;
+    int32 yawnTotal = 4;
+    float x = 5;
+    float y = 6;
+    float height = 7;
+    float width = 8;
+    bool isValid = 9;
 }

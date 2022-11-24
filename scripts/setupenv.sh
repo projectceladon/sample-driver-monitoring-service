@@ -20,7 +20,7 @@ else
     if (echo $INTEL_CVSDK_DIR | grep -q "openvino_2019"); 
     then export OPENVINO_VER=2019
     else
-         export OPENVINO_VER=2019
+         export OPENVINO_VER=2022
     fi
 fi
 
