@@ -39,4 +39,11 @@ message Prediction {
     float height = 7;
     float width = 8;
     bool isValid = 9;
+    double inferenceTime = 10;
+    enum IS_DIST {
+      NOT_DISTRACTED = 0;
+      DISTRACTED = 1;
+      PHONE = 2;
+    }
+    IS_DIST distLevel = 11;
 }
