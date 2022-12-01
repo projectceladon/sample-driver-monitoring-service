@@ -132,7 +132,7 @@ if(OpenCV_FOUND)
 endif()
 
 # Include dlib
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=aggressive-loop-optimizations -Wno-error=maybe-uninitialized")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNO_SOUND -Wno-error=aggressive-loop-optimizations -Wno-error=maybe-uninitialized")
 add_subdirectory(third-party/dlib dlib_build)
 
 ####################################

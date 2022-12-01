@@ -611,19 +611,7 @@ int main(int argc, char *argv[])
 
         // read input (video) frame
         cv::Mat frame;
-        if(startRemote) {
-            //wait until we get first frame from remote
-            while(mRemoteClient.getFrameQueue().empty()) {
-                slog::info << "waiting for first frame" << slog::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            }
-            if(!mRemoteClient.getFrameQueue().empty()) {
-                slog::info << "reading first frame" << slog::endl;
-                frame = mRemoteClient.getFrameQueue().front();
-                mRemoteClient.getFrameQueue().pop();
-            }
-        }
-        else if (!cap.read(frame))
+        if (!startRemote && !cap.read(frame))
         {
             throw std::logic_error("Failed to get frame from cv::VideoCapture");
         }
@@ -730,6 +718,19 @@ int main(int argc, char *argv[])
         bool frameReadStatus = true;
         bool isLastFrame;
         cv::Mat prev_frame, next_frame;
+
+        if(startRemote) {
+            //wait until we get first frame from remote
+            while(mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "waiting for first frame" << slog::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+            if(!mRemoteClient.getFrameQueue().empty()) {
+                slog::info << "reading first frame" << slog::endl;
+                frame = mRemoteClient.getFrameQueue().front();
+                mRemoteClient.getFrameQueue().pop();
+            }
+        }
 
         // Detect all faces on the first frame and read the next one.
         timer.start("detection");
