@@ -161,11 +161,11 @@ By now you should have completed the Linux installation guide for the OpenVINOâ„
 
 === Basic Build
 
-**1.** Clone the repository at desired location:
+**1.** Clone the repository to DMS folder at desired location:
 
 [source,bash]
 ----
-git clone https://github.com/incluit/OpenVino-Driver-Behaviour.git
+git clone https://github.com/incluit/OpenVino-Driver-Behaviour.git DMS
 ----
 
 **2.** The first step is to configure the build environment for the OpenCV
@@ -184,11 +184,12 @@ this instead:
 source  /opt/intel/computer_vision_sdk/bin/setupvars.sh
 ----
 
-**3.** Change to the top git repository:
+**3.** Change directory and clone dlib to third-party dir:
 
 [source,bash]
 ----
-cd OpenVino-Driver-Behaviour
+cd DMS
+git clone https://github.com/davisking/dlib/ -b v19.17 third-party/dlib
 ----
 
 **4.** OpenVINO's Release R2020.1 or greater compatibility

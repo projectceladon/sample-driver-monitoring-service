@@ -960,7 +960,7 @@ int main(int argc, char *argv[])
                             cv::Rect aux_rect = cv::Rect(rect.x + scale_factor_x * rect.width, rect.y + scale_factor_y * rect.height, rect.width * (1 - 2 * scale_factor_x), rect.height * (1 - scale_factor_y));
                             //dlib facial landmarks
                             dlib::array2d<dlib::rgb_pixel> img;
-                            dlib::assign_image(img, dlib::cv_image<dlib::bgr_pixel>(prev_frame));
+                            dlib::assign_image(img, dlib::cv_image<dlib::bgr_pixel>(cvIplImage(prev_frame)));
                             dlib::rectangle det = openCVRectToDlib(aux_rect);
                             dlib::full_object_detection shape = sp(img, det);
                             for (int i = 0; i < shape.num_parts(); i++)
