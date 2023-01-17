@@ -113,8 +113,9 @@ add_executable(${TARGET_NAME} ${MAIN_SRC} ${MAIN_HEADERS}
     ${hw_proto_srcs}
     ${hw_grpc_srcs})
 
-add_dependencies(${TARGET_NAME} gflags)
+#add_dependencies(${TARGET_NAME} gflags)
 add_dependencies(${TARGET_NAME} ie_samples_utils)
+find_package(GFlags REQUIRED gflags)
 
 add_definitions(-DBOOST_LOG_DYN_LINK)
 if( SIMULATOR )
