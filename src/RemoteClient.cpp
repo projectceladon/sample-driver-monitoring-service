@@ -56,7 +56,7 @@ namespace DMS {
 
     void RemoteClient::RunServer() {
         std::cout << "RunServer E" << std::endl;
-        std::string server_address("0.0.0.0:50051");
+        std::string server_address("0.0.0.0:50059");
         mService = std::make_shared<DetectionServiceImpl>();
 
         grpc::EnableDefaultHealthCheckService(true);

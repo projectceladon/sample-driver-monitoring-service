@@ -21,15 +21,14 @@ include(grpc_common.cmake)
 set(TARGET_NAME "driver_behavior")
 
 # Proto file
-#get_filename_component(hw_proto "protos/helloworld.proto" PATH)
-get_filename_component(hw_proto "src/protos/helloworld.proto" ABSOLUTE)
+get_filename_component(hw_proto "src/protos/dms.proto" ABSOLUTE)
 get_filename_component(hw_proto_path "${hw_proto}" PATH)
 
 # Generated sources
-set(hw_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.pb.cc")
-set(hw_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.pb.h")
-set(hw_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc")
-set(hw_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h")
+set(hw_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/dms.pb.cc")
+set(hw_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/dms.pb.h")
+set(hw_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/dms.grpc.pb.cc")
+set(hw_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/dms.grpc.pb.h")
 add_custom_command(
       OUTPUT "${hw_proto_srcs}" "${hw_proto_hdrs}" "${hw_grpc_srcs}" "${hw_grpc_hdrs}"
       COMMAND ${_PROTOBUF_PROTOC}
@@ -55,6 +54,7 @@ target_link_libraries(hw_grpc_proto
   ${_PROTOBUF_LIBPROTOBUF})
 
 option(SIMULATOR  "Use ets/ats for truck data simulation" OFF)
+option(DEBUG  "Use this option to enable dump processed" OFF)
 
 add_definitions(-DOPENVINO_VER=$ENV{OPENVINO_VER})
 message(STATUS "OpenVINO_Version=$ENV{OPENVINO_VER}")
@@ -118,6 +118,11 @@ add_dependencies(${TARGET_NAME} ie_samples_utils)
 find_package(GFlags REQUIRED gflags)
 
 add_definitions(-DBOOST_LOG_DYN_LINK)
+
+if( DEBUG )
+  add_definitions(-DDEBUG)
+endif()
+
 if( SIMULATOR )
   add_definitions(-DSIMULATOR)
 endif()

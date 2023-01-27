@@ -88,28 +88,6 @@ struct FaceDetection : BaseDetection {
     void fetchResults();
 };
 
-struct AgeGenderDetection : BaseDetection {
-    struct Result {
-        float age;
-        float maleProb;
-    };
-
-    std::string input;
-    std::string outputAge;
-    std::string outputGender;
-    int enquedFaces;
-
-    AgeGenderDetection(const std::string &pathToModel,
-                       const std::string &deviceForInference,
-                       int maxBatch, bool isBatchDynamic, bool isAsync);
-
-    InferenceEngine::CNNNetwork read() override;
-    void submitRequest() override;
-
-    void enqueue(const cv::Mat &face);
-    Result operator[] (int idx) const;
-};
-
 struct HeadPoseDetection : BaseDetection {
     struct Results {
         float angle_r;
@@ -135,22 +113,6 @@ struct HeadPoseDetection : BaseDetection {
     Results operator[] (int idx) const;
     void buildCameraMatrix(int cx, int cy, float focalLength);
     void drawAxes(cv::Mat& frame, cv::Point3f cpoint, Results headPose, float scale);
-};
-
-struct EmotionsDetection : BaseDetection {
-    std::string input;
-    std::string outputEmotions;
-    int enquedFaces;
-
-    EmotionsDetection(const std::string &pathToModel,
-                      const std::string &deviceForInference,
-                      int maxBatch, bool isBatchDynamic, bool isAsync);
-
-    InferenceEngine::CNNNetwork read() override;
-    void submitRequest() override;
-
-    void enqueue(const cv::Mat &face);
-    std::string operator[] (int idx) const;
 };
 
 struct FacialLandmarksDetection : BaseDetection {

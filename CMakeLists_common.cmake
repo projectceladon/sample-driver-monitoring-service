@@ -45,7 +45,6 @@ message(STATUS "CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}")
 get_filename_component(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../share" ABSOLUTE)
 
 message(STATUS "Looking for inference engine configuration file at: ${CMAKE_PREFIX_PATH}")
-#find_package(InferenceEngine 1.0)
 find_package(InferenceEngine 2.0)
 
 if (NOT InferenceEngine_FOUND)
@@ -70,11 +69,7 @@ endif()
 
 if (NOT (IE_MAIN_SOURCE_DIR))
     set(NEED_EXTENSIONS TRUE)
-#    if (WIN32)
-#        set (IE_MAIN_SOURCE_DIR ${CMAKE_SOURCE_DIR}/../bin/)
-#    else()
-        set (IE_MAIN_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-#    endif()
+    set (IE_MAIN_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(NOT(UNIX))
@@ -143,13 +138,9 @@ set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
 ####################################
 
 # Make sure dependencies are present
-#set(IE_SAMPLES_GFLAGS_DIR "${InferenceEngine_Samples_DIR}/thirdparty/gflags")
 set(IE_SAMPLES_FORMAT_READER_DIR "${InferenceEngine_Samples_DIR}/common/format_reader")
 set(IE_SAMPLES_UTILS_DIR "${InferenceEngine_Samples_DIR}/common/utils")
 
-#if(NOT EXISTS "${IE_SAMPLES_GFLAGS_DIR}/CMakeLists.txt")
-#    message(FATAL_ERROR "The required 'gflags' library was not found in the Inference Engine's samples at: ${IE_SAMPLES_GFLAGS_DIR}")
-#endif()
 if(NOT EXISTS "${IE_SAMPLES_FORMAT_READER_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "The required 'format_reader' library was not found in the Inference Engine's samples at: ${IE_SAMPLES_FORMAT_READER_DIR}")
 endif()
@@ -159,12 +150,6 @@ endif()
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (
-    #"/opt/intel/openvino_2022/samples/cpp",
-    #"/opt/intel/openvino_2022/runtime/include",
-    #"/opt/intel/openvino_2022/samples/cpp/common",
-    # "/opt/intel/openvino_2022/samples/cpp/common/format_reader",
-    #"/opt/intel/openvino_2022/samples/cpp/common/utils/include",
-    #"/opt/intel/openvino_2022/runtime/include/ie"
     ${InferenceEngine_Samples_DIR}/../include,
     ${InferenceEngine_Samples_DIR}/../../samples/cpp/common/format_reader,
     ${InferenceEngine_Samples_DIR}/../../samples/cpp/common/utils/include,
@@ -173,28 +158,8 @@ include_directories (
 
 set(GFLAGS_IS_SUBPROJECT FALSE)
 add_subdirectory(${IE_SAMPLES_UTILS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/ie_samples_utils)
-#add_subdirectory(${IE_SAMPLES_GFLAGS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gflags)
-#add_subdirectory(${IE_SAMPLES_FORMAT_READER_DIR} ${CMAKE_CURRENT_BINARY_DIR}/format_reader)
 
 if (UNIX)
     SET(LIB_DL dl)
 endif()
-
-#add_subdirectory(object_detection_sample)
-#add_subdirectory(interactive_face_detection_sample)
-#add_subdirectory(security_barrier_camera_sample)
-#add_subdirectory(object_detection_demo_ssd_async)
-#add_subdirectory(object_detection_sample_ssd)
-#add_subdirectory(classification_sample)
-#add_subdirectory(classification_sample_async)
-#add_subdirectory(hello_classification)
-#add_subdirectory(hello_request_classification)
-#add_subdirectory(segmentation_sample)
-#add_subdirectory(style_transfer_sample)
-
-#if (OpenCV_FOUND)
-#    add_subdirectory(validation_app)
-#else()
-#    message(STATUS "Validation app build is switched off")
-#endif()
 

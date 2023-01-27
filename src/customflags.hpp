@@ -260,7 +260,9 @@ DEFINE_bool(no_async, false, no_async_message);
 
 /// \brief Flag to enable video ouput<br>
 /// It is an optional parameter
+#ifdef DEBUG
 DEFINE_bool(o, false, video_output_message);
+#endif
 
 ///Custom
 
@@ -309,6 +311,8 @@ static void showUsage() {
     std::cout << "    -pc                        " << performance_counter_message << std::endl;
     std::cout << "    -r                         " << raw_output_message << std::endl;
     std::cout << "    -t                         " << thresh_output_message << std::endl;
-    std::cout << "    -o                       " << video_output_message << std::endl;
+#ifdef DEBUG
+    std::cout << "    -o                         " << video_output_message << std::endl;
+#endif
 }
 

@@ -24,7 +24,6 @@
 #include "cnn.hpp"
 #include "face_reid.hpp"
 #include "tracker.hpp"
-#include "classes.hpp"
 
 #include <ie_iextension.h>
 
@@ -44,21 +43,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#ifdef SIMULATOR
-#include "rclcpp/rclcpp.hpp"
-#include "ets_msgs/msg/truck.hpp"
-
-void ros_client(Truck *truck)
-{
-    auto node = rclcpp::Node::make_shared("ets_client");
-
-    auto sub = node->create_subscription<ets_msgs::msg::Truck>(
-        "truck", std::bind(&Truck::ros_callback, truck, std::placeholders::_1), rmw_qos_profile_default);
-
-    rclcpp::spin(node);
-}
-#endif
-
 #include "RemoteClient.hpp"
 
 using namespace InferenceEngine;
@@ -131,51 +115,6 @@ int isDistracted(float y, float p, float r)
     return result;
 }
 
-bool identify_driver(cv::Mat frame, std::vector<FaceDetection::Result> *results, VectorCNN *landmarks_detector,
-                     VectorCNN *face_reid, EmbeddingsGallery *face_gallery, std::string *driver_name)
-{
-    bool ret = false;
-    std::vector<cv::Mat> face_rois, landmarks, embeddings;
-
-    if (results->empty())
-        return ret;
-
-    for (const auto &face : *results)
-    {
-        cv::Rect rect = face.location;
-        float scale_factor_x = 0.15;
-        float scale_factor_y = 0.20;
-        double aux_x = (rect.x > 3 ? rect.x : 3);
-        double aux_y = (rect.y > 3 ? rect.y : 3);
-        double aux_width = (rect.width + aux_x < frame.cols ? rect.width : frame.cols - aux_x);
-        double aux_height = (rect.height + aux_y < frame.rows ? rect.height : frame.rows - aux_y);
-        aux_x += scale_factor_x * aux_width;
-        aux_y += scale_factor_y * aux_height;
-        aux_width = aux_width * (1 - 2 * scale_factor_x);
-        aux_height = aux_height * (1 - scale_factor_y);
-        cv::Rect aux_rect = cv::Rect(aux_x, aux_y, aux_width, aux_height);
-        face_rois.push_back(frame(aux_rect));
-    }
-
-    if (!face_rois.empty())
-    {
-        landmarks_detector->Compute(face_rois, &landmarks, cv::Size(2, 5));
-        AlignFaces(&face_rois, &landmarks);
-        face_reid->Compute(face_rois, &embeddings);
-        auto ids = face_gallery->GetIDsByEmbeddings(embeddings);
-
-        if (!ids.empty() && ids[0] != EmbeddingsGallery::unknown_id)
-        {
-            ret = true;
-            *driver_name = face_gallery->GetLabelByID(ids[0]);
-        }
-        else
-            *driver_name = "Unknown";
-    }
-
-    return ret;
-}
-
 // Global variables declaration
 int timer_off = 0; // N frames for Welcome sign
 bool face_identified = false;
@@ -185,8 +124,6 @@ bool falarmDistraction = false;
 std::string driver_name = "";
 Timer timer;
 int firstTime = 0;
-Truck truck;
-bool fSim = false;
 
 int maxNormal = 40;
 int maxWarning = 70;
@@ -237,13 +174,13 @@ void alarmDrowsiness(cv::Mat prev_frame, int yawn_total, int blinl_total, int wi
     }
 
     //VU Meter Logic
-    if ((tDrowsiness <= maxNormal) && (vYawn != 0 || vBlink != 0) && !truck.getParkingBrake())
+    if ((tDrowsiness <= maxNormal) && (vYawn != 0 || vBlink != 0))
     {
         tDrowsiness += 10 * vYawn + 5 * vBlink * (timeBlink / 1000);
         startNoDrowsiness = 0;
     }
 
-    else if ((tDrowsiness > maxNormal) && (vYawn != 0 || vBlink != 0 || vHeadbutt != 0) && !truck.getParkingBrake())
+    else if ((tDrowsiness > maxNormal) && (vYawn != 0 || vBlink != 0 || vHeadbutt != 0))
     {
         tDrowsiness += 5 * vYawn + 10 * vBlink * (timeBlink / 1000) + vHeadbutt * 30;
         startNoDrowsiness = 0;
@@ -270,7 +207,7 @@ void alarmDrowsiness(cv::Mat prev_frame, int yawn_total, int blinl_total, int wi
     int y_vum_drow = y_alarm + 55;
 
     //Drawing VU Meters
-    // VUmeter Drowsiness: Rectangle Background
+    //VUmeter Drowsiness: Rectangle Background
     cv::rectangle(prev_frame, cv::Rect(x_vum_drow, y_vum_drow + y_vum - (y_vum_unit * maxNormal), x_vum, y_vum_unit * maxNormal), cv::Scalar(0, 50, 0), -1);
     cv::rectangle(prev_frame, cv::Rect(x_vum_drow, y_vum_drow + y_vum - (y_vum_unit * maxWarning), x_vum, y_vum_unit * (maxWarning - maxNormal)), cv::Scalar(0, 50, 50), -1);
     cv::rectangle(prev_frame, cv::Rect(x_vum_drow, y_vum_drow + y_vum - (y_vum_unit * maxCritical), x_vum, y_vum_unit * (maxCritical - maxWarning)), cv::Scalar(0, 0, 50), -1);
@@ -323,18 +260,12 @@ void alarmDistraction(cv::Mat prev_frame, int is_dist, int y_alarm, int x_truck_
         switch (is_dist)
         {
         case DISTRACTED:
-            if (truck.getSpeed() * 3.6 >= 5 || !fSim)
-            {
                 labelAlarm = "EYES OUT OF ROAD";
                 falarmDistraction = true;
-            }
             break;
         case PHONE:
-            if (truck.getSpeed() * 3.6 >= 2 || truck.getSpeed() * 3.6 <= -2 || !fSim)
-            {
                 labelAlarm = "LOOKING AT THE PHONE";
                 falarmDistraction = true;
-            }
             break;
         default:
             falarmDistraction = false;
@@ -436,55 +367,6 @@ void alarmDistraction(cv::Mat prev_frame, int is_dist, int y_alarm, int x_truck_
     cv::rectangle(prev_frame, cv::Rect(x_vum_dist, y_vum_dist, x_vum, y_vum), cv::Scalar(255, 255, 255), 1);
 }
 
-// Thread 1: Driver Recognition
-void driver_recognition(cv::Mat prev_frame, std::vector<FaceDetection::Result> prev_detection_results, VectorCNN landmarks_detector, VectorCNN face_reid, EmbeddingsGallery face_gallery, std::string *driver_name, int x_truck_i, int y_driver_i)
-{
-    if (timer["face_identified"].getSmoothedDuration() > 60000.0 && face_identified && firstTime == 1 ||
-        timer["face_identified"].getSmoothedDuration() > 1000.0 && !face_identified && firstTime == 1 ||
-        firstTime == 0)
-    {
-        cv::Mat aux_prev_frame = prev_frame.clone();
-        face_identified = identify_driver(aux_prev_frame, &prev_detection_results, &landmarks_detector, &face_reid, &face_gallery, driver_name);
-        if (!prev_detection_results.empty())
-            cv::rectangle(prev_frame, prev_detection_results[0].location, cv::Scalar(255, 255, 255), 1);
-        firstTime = 1;
-        timer.start("face_identified");
-        //Take Photo
-        if (!face_identified && firstPhoto && !face_save.empty()) // Only save the first picture of the "Not Authorized Driver".
-        {
-            //cv::imwrite("../../../drivers/unknown/Unknown-Driver.jpg", face_save);
-            firstPhoto = false;
-        }
-    }
-    
-    // Driver Label
-    cv::putText(prev_frame, "Driver Information", cv::Point2f(x_truck_i, y_driver_i + 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 2);
-
-    if (face_identified)
-    {
-        cv::putText(prev_frame, "Driver: " + *driver_name, cv::Point2f(x_truck_i, y_driver_i + 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1);
-    }
-    else if (!face_identified && *driver_name == "Unknown")
-    {
-        cv::putText(prev_frame, "Driver: " + *driver_name, cv::Point2f(x_truck_i, y_driver_i + 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
-    }
-}
-
-#ifndef NO_SOUND
-void beeping(Player *beep, bool *finished)
-{
-    while (!(*finished))
-    {
-        if (tDrowsiness <= 100)
-            beep->setGain(exp((float)((tDrowsiness - 100) / 10)));
-        if (tDrowsiness > 30)
-        {
-            if (!beep->isPlaying())
-                beep->play();
-        }
-    }
-}
-#endif
 int headbuttDetection(boost::circular_buffer<double> *angle_p)
 {
     boost::circular_buffer<double> &pitch = *angle_p;
@@ -506,12 +388,6 @@ int headbuttDetection(boost::circular_buffer<double> *angle_p)
 
 int main(int argc, char *argv[])
 {
-
-#ifdef SIMULATOR
-    rclcpp::init(argc, argv);
-    std::thread truck_data(ros_client, &truck);
-    fSim = true;
-#endif
 
     try
     {
@@ -598,11 +474,12 @@ int main(int argc, char *argv[])
             height= (size_t)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
         }
         // Save the output
+#ifdef DEBUG
         cv::VideoWriter video_output;
         if (FLAGS_o) {
             video_output = cv::VideoWriter("video_output.avi",cv::VideoWriter::fourcc('M','J','P','G'),cap.get(cv::CAP_PROP_FPS), cv::Size(width,height),true);
         }
-
+#endif
         int x = 200;
         int y = 155;
         int x_truck_i = width - (x + 10);
@@ -669,7 +546,7 @@ int main(int argc, char *argv[])
 
         FaceDetection faceDetector(FLAGS_m, FLAGS_d, 1, false, FLAGS_async, FLAGS_t, FLAGS_r);
         HeadPoseDetection headPoseDetector(FLAGS_m_hp, FLAGS_d_hp, FLAGS_n_hp, FLAGS_dyn_hp, FLAGS_async);
-        //	FacialLandmarksDetection facialLandmarksDetector(FLAGS_m_lm, FLAGS_d_lm, FLAGS_n_lm, FLAGS_dyn_lm, FLAGS_async);
+        //FacialLandmarksDetection facialLandmarksDetector(FLAGS_m_lm, FLAGS_d_lm, FLAGS_n_lm, FLAGS_dyn_lm, FLAGS_async);
 
         auto fr_model_path = FLAGS_m_reid;
         std::cout << fr_model_path << std::endl;
@@ -693,7 +570,6 @@ int main(int argc, char *argv[])
         VectorCNN landmarks_detector(landmarks_config);
 
         double t_reid = 0.4; // Cosine distance threshold between two vectors for face reidentification.
-        EmbeddingsGallery face_gallery(FLAGS_fg, t_reid, landmarks_detector, face_reid);
         // -----------------------------------------------------------------------------------------------------
 
         // --------------------------- 2. Read IR models and load them to plugins ------------------------------
@@ -777,10 +653,6 @@ int main(int argc, char *argv[])
 
         bool processing_finished = false;
 
-#ifndef NO_SOUND
-        Player beep("beep.ogg");
-        std::thread beep_thread(beeping, &beep, &processing_finished);
-#endif
         timer.start("total");
         //show remote input fps every 5 seconds
         bool getCameraFPS = true;
@@ -885,63 +757,58 @@ int main(int argc, char *argv[])
             // Visualize results.
             if (!FLAGS_no_show)
             {
-                TrackedObjects tracked_face_objects;
-                timer.start("visualization");
-                out.str("");
-                out << "OpenCV cap/render time: " << std::fixed << std::setprecision(2)
-                    << (timer["video frame decoding"].getSmoothedDuration() +
-                        timer["visualization"].getSmoothedDuration())
-                    << " ms";
-                cv::putText(prev_frame, out.str(), cv::Point2f(10, 25), cv::FONT_HERSHEY_TRIPLEX, 0.4,
-                            cv::Scalar(255, 0, 0));
-
-                out.str("");
-                out << "Face detection time: " << std::fixed << std::setprecision(2)
-                    << timer["detection"].getSmoothedDuration()
-                    << " ms ("
-                    << 1000.F / (timer["detection"].getSmoothedDuration())
-                    << " fps)";
-                cv::putText(prev_frame, out.str(), cv::Point2f(10, 45), cv::FONT_HERSHEY_TRIPLEX, 0.4,
-                            cv::Scalar(255, 0, 0));
-
-                out.str("");
-                out << "Total image throughput: "          
-                    << framesCounter * (1000.F / timer["total"].getSmoothedDuration())
-                    << " FPS";
-                cv::putText(prev_frame, out.str(), cv::Point2f(10, 65), cv::FONT_HERSHEY_TRIPLEX, 0.4,
-                            cv::Scalar(255, 0, 0));
-
-                if (isFaceAnalyticsEnabled)
-                {
+                if(!FLAGS_r) {
+                    TrackedObjects tracked_face_objects;
+                    timer.start("visualization");
                     out.str("");
-                    out << "Face Analysics Networks "
-                        << "time: " << std::fixed << std::setprecision(2)
-                        << timer["face analytics call"].getSmoothedDuration() +
-                               timer["face analytics wait"].getSmoothedDuration()
-                        << " ms ";
-                    if (!prev_detection_results.empty())
-                    {
-                        out << "("
-                            << 1000.F / (timer["face analytics call"].getSmoothedDuration() +
-                                         timer["face analytics wait"].getSmoothedDuration())
-                            << " fps)";
-                    }
-                    cv::putText(prev_frame, out.str(), cv::Point2f(10, 85), cv::FONT_HERSHEY_TRIPLEX, 0.4,
+                    out << "OpenCV cap/render time: " << std::fixed << std::setprecision(2)
+                        << (timer["video frame decoding"].getSmoothedDuration() +
+                            timer["visualization"].getSmoothedDuration())
+                        << " ms";
+                    cv::putText(prev_frame, out.str(), cv::Point2f(10, 25), cv::FONT_HERSHEY_TRIPLEX, 0.4,
                                 cv::Scalar(255, 0, 0));
+
+                    out.str("");
+                    out << "Face detection time: " << std::fixed << std::setprecision(2)
+                        << timer["detection"].getSmoothedDuration()
+                        << " ms ("
+                        << 1000.F / (timer["detection"].getSmoothedDuration())
+                        << " fps)";
+                    cv::putText(prev_frame, out.str(), cv::Point2f(10, 45), cv::FONT_HERSHEY_TRIPLEX, 0.4,
+                                cv::Scalar(255, 0, 0));
+
+                    out.str("");
+                    out << "Total image throughput: "
+                        << framesCounter * (1000.F / timer["total"].getSmoothedDuration())
+                        << " FPS";
+                    cv::putText(prev_frame, out.str(), cv::Point2f(10, 65), cv::FONT_HERSHEY_TRIPLEX, 0.4,
+                                cv::Scalar(255, 0, 0));
+
+                    if (isFaceAnalyticsEnabled)
+                    {
+                        out.str("");
+                        out << "Face Analysics Networks "
+                            << "time: " << std::fixed << std::setprecision(2)
+                            << timer["face analytics call"].getSmoothedDuration() +
+                                timer["face analytics wait"].getSmoothedDuration()
+                            << " ms ";
+                        if (!prev_detection_results.empty())
+                        {
+                            out << "("
+                                << 1000.F / (timer["face analytics call"].getSmoothedDuration() +
+                                            timer["face analytics wait"].getSmoothedDuration())
+                                << " fps)";
+                        }
+                        cv::putText(prev_frame, out.str(), cv::Point2f(10, 85), cv::FONT_HERSHEY_TRIPLEX, 0.4,
+                                    cv::Scalar(255, 0, 0));
+                    }
                 }
 
-                if ((truck.getEngine() && fSim) || !fSim) // Detect if Engine = ON and Simulator Flag
+                try
                 { 
-                    // Thread 1: Driver Recognition
                     if(FLAGS_r) {
                         slog::info << "running driver recognition" << slog::endl;
                     }
-                    std::thread thread_recognition(driver_recognition, prev_frame, prev_detection_results, landmarks_detector, face_reid, face_gallery, &driver_name, x_truck_i, y_driver_i);
-                    
-                    // Driver Label (CHECK! -> Not here)
-                    cv::rectangle(prev_frame, cv::Rect(width - (x + 20), y_driver_i, x, y_driver), cv::Scalar(0, 0, 0), -1);
-                    cv::rectangle(prev_frame, cv::Rect(width - (x + 20), y_driver_i, x, y_driver), cv::Scalar(255, 255, 255), 2);
-
                     // For every detected face.
                     int ii = 0;
                     std::vector<cv::Point2f> left_eye;
@@ -1124,41 +991,12 @@ int main(int argc, char *argv[])
                         }
                         ii++;
                     }
-
-#ifdef SIMULATOR
-                    // Truck Label
-                    cv::rectangle(prev_frame, cv::Rect(width - (x + 20), 20, x, y), cv::Scalar(0, 0, 0), -1);
-                    cv::rectangle(prev_frame, cv::Rect(width - (x + 20), 20, x, y), cv::Scalar(255, 255, 255), 2);
-
-                    cv::putText(prev_frame, "Truck Information", cv::Point2f(x_truck_i, 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 2);
-                    if (truck.getEngine())
-                        cv::putText(prev_frame, "Engine: ON", cv::Point2f(x_truck_i, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.8);
-                    else
-                        cv::putText(prev_frame, "Engine: OFF", cv::Point2f(x_truck_i, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.8);
-                    cv::putText(prev_frame, cv::format("Speed (Km/h): %3.2f", truck.getSpeed() * 3.6), cv::Point2f(x_truck_i, 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-                    cv::putText(prev_frame, "RPM: " + std::to_string(truck.getRpm()), cv::Point2f(x_truck_i, 100), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-                    cv::putText(prev_frame, "Gear: " + std::to_string(truck.getGear()), cv::Point2f(x_truck_i, 120), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-                    if (truck.getTrailer())
-                        cv::putText(prev_frame, "Trailer: ON", cv::Point2f(x_truck_i, 140), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.2);
-                    else
-                        cv::putText(prev_frame, "Trailer: OFF", cv::Point2f(x_truck_i, 140), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.2);
-
-                    if (truck.getParkingBrake())
-                        cv::putText(prev_frame, "GearStatus: Parking", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.2);
-                    else if (truck.getSpeed() < -0.03)
-                        cv::putText(prev_frame, "GearStatus: Reverse", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-                    else if (truck.getSpeed() > 0.03)
-                        cv::putText(prev_frame, "GearStatus: Driving", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-                    else
-                        cv::putText(prev_frame, "GearStatus: Stopped", cv::Point2f(x_truck_i, 160), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1.2);
-#endif
-
-                    // End Thread 1: Driver Recognition
-                    thread_recognition.join();
-
                 }
-
-                // Sample of Results
+                catch (...)
+                {
+                    slog::err << "Unknown/internal exception happened." << slog::endl;
+                    return 1;
+                }
                 
                 if(startRemote) {
                     auto frameInferenceTime = timer["detection"].getSmoothedDuration() + \
@@ -1172,13 +1010,15 @@ int main(int argc, char *argv[])
                     mRemoteClient.addResult(*mResult.get());
                     mRemoteClient.doUnlock();
                 } else {
-                    //cv::imshow("Detection results", prev_frame);
+                    cv::imshow("Detection results", prev_frame);
                 }
                
                 // Save the ouput
+#ifdef DEBUG
                 if (FLAGS_o) {
                     video_output.write(prev_frame);
                 }
+#endif
                 timer.finish("visualization");
             }
 
@@ -1205,9 +1045,6 @@ int main(int argc, char *argv[])
         }
 
         processing_finished = true;
-#ifndef NO_SOUND        
-        beep_thread.join();
-#endif
         slog::info << "Number of processed frames: " << framesCounter << slog::endl;
         slog::info << "Total image throughput: " << framesCounter * (1000.F / timer["total"].getTotalDuration()) << " fps" << slog::endl;
         getCameraFPS = false;
@@ -1230,10 +1067,6 @@ int main(int argc, char *argv[])
         slog::err << "Unknown/internal exception happened." << slog::endl;
         return 1;
     }
-
-#ifdef SIMULATOR
-    truck_data.join();
-#endif
 
     slog::info << "Execution successful" << slog::endl;
 
