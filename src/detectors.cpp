@@ -32,7 +32,7 @@ BaseDetection::BaseDetection(std::string topoName,
                              int maxBatch, bool isBatchDynamic, bool isAsync)
     : topoName(topoName), pathToModel(pathToModel), deviceForInference(deviceForInference),
       maxBatch(maxBatch), isBatchDynamic(isBatchDynamic), isAsync(isAsync),
-      enablingChecked(false), _enabled(false) {
+      enablingChecked(false), _enabled(false), plugin(NULL) {
     if (isAsync) {
         slog::info << "Use async mode for " << topoName << slog::endl;
     }
@@ -76,7 +76,8 @@ FaceDetection::FaceDetection(const std::string &pathToModel,
                              double detectionThreshold, bool doRawOutputMessages)
     : BaseDetection("Face Detection", pathToModel, deviceForInference, maxBatch, isBatchDynamic, isAsync),
       detectionThreshold(detectionThreshold), doRawOutputMessages(doRawOutputMessages),
-      enquedFrames(0), width(0), height(0), bb_enlarge_coefficient(1.2), resultsFetched(false) {
+      enquedFrames(0), width(0), height(0), bb_enlarge_coefficient(1.2), resultsFetched(false),
+      maxProposalCount(0), objectSize(0){
 }
 
 void FaceDetection::submitRequest() {
