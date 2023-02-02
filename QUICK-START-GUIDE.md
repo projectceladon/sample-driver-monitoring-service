@@ -2,12 +2,11 @@
 
 ## Pre-requite
 
-* You should install OpenVINO 2022.1 by APT.
+* You should install OpenVINO 2022.1 or greater
+* You should install or build opencv version 1.46.2 for cpp
 * In order to convert model, you should install openvino-dev by PIP.
 
 ```shell
-python -m venv .venv
-source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install wheel
 python -m pip install openvino-dev
@@ -22,15 +21,14 @@ sudo apt-get install libboost-dev libboost-log-dev libao-dev libsndfile1-dev lib
 ## Download models
 
 ```shell
-source /opt/intel/openvino_2022/setupvars.sh
-source .venv/bin/activate
+source <openvino path>/setupvars.sh
 bash scripts/download_models.sh
 ```
 
 ## Build Program
 
 ```shell
-source /opt/intel/openvino_2022/setupvars.sh
+source <openvino path>/setupvars.sh
 mkdir build
 cd build
 source ../scripts/setupenv.sh
@@ -43,7 +41,7 @@ make
 ### OpenVINO ENV
 
 ```shell
-source /opt/intel/openvino_2022/setupvars.sh
+source <openvino path>/setupvars.sh
 ```
 
 ### Project ENV
@@ -53,30 +51,21 @@ cd scripts
 source setupenv.sh
 ```
 
-### Register Face
-
-* Put your image to `drivers` folder. And file name should be `<name>.N.jpg`
-
-```shell
-cd scripts/
-python3 create_list.py ../drivers/
-```
-
 ### Run Program
 
 #### Camera Input
 
 ```shell
 cd ../build/intel64/Release
-./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json
+./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm
 ```
 
 #### Recorded Video Input
 
 ```shell
 cd ../build/intel64/Release
-./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json -i <path/video/input>
+./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -i <path/video/input>
 
-# Example)
-./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -d_recognition -fg ../../../scripts/faces_gallery.json -i ../../../.data/demo03-resized.webm
+# (Example)
+./driver_behavior -m $face232 -d CPU -m_hp $hp32 -d_hp CPU -dlib_lm -i ../../../.data/demo03-resized.webm
 ```

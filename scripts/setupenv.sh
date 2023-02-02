@@ -41,27 +41,8 @@ modName=landmarks-regression-retail-0009
 export lm216=$modelDir/FP16/$modName.xml
 export lm232=$modelDir/FP32/$modName.xml
 
-modName=person-detection-action-recognition-classroom-0003
-export pda16=$modelDir/FP16/$modName.xml
-export pda32=$modelDir/FP32/$modName.xml
-
-modName=person-reidentification-retail-0079
-export pr116=$modelDir/FP16/$modName.xml
-export pr132=$modelDir/FP32/$modName.xml
-
-modName=emotions-recognition-retail-0003
-export em16=$modelDir/FP16/$modName.xml
-export em32=$modelDir/FP32/$modName.xml
-
 modName=head-pose-estimation-adas-0001
 export hp16=$modelDir/FP16/$modName.xml
 export hp32=$modelDir/FP32/$modName.xml
-
-modName=face-reidentification-retail-0095
-export reid16=$modelDir/FP16/$modName.xml
-export reid32=$modelDir/FP32/$modName.xml
-
-modName=frozen_yolo_v3
-export yolo16=$parent_path/../data/$modName.xml
 
 export PROJECT_PATH=${PROJECT_PATH}

@@ -69,6 +69,8 @@ else()
     return()
 endif()
 
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+
 if ( SIMULATOR )
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -152,16 +154,12 @@ add_custom_command(TARGET driver_behavior POST_BUILD
 
 add_custom_command(TARGET driver_behavior POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/data/beep.ogg $<TARGET_FILE_DIR:driver_behavior>)
-
-add_custom_command(TARGET driver_behavior POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/faces_gallery.json $<TARGET_FILE_DIR:driver_behavior>)
 
 if ( SIMULATOR )
 install(TARGETS driver_behavior
     DESTINATION bin)
-install(FILES data/beep.ogg data/shape_predictor_68_face_landmarks.dat scripts/faces_gallery.json DESTINATION bin)
+install(FILES data/shape_predictor_68_face_landmarks.dat scripts/faces_gallery.json DESTINATION bin)
 
 ament_target_dependencies(driver_behavior
     "rclcpp"
