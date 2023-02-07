@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
 # Create variables for all models used by the tutorials to make 
 #  it easier to reference them with short names
 
