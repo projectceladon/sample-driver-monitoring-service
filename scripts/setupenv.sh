@@ -49,3 +49,7 @@ export hp16=$modelDir/FP16/$modName.xml
 export hp32=$modelDir/FP32/$modName.xml
 
 export PROJECT_PATH=${PROJECT_PATH}
+
+modName=face-reidentification-retail-0095
+export reid16=$modelDir/FP16/$modName.xml
+export reid32=$modelDir/FP32/$modName.xml
